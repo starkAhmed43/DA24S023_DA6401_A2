@@ -1,6 +1,8 @@
 .DS_Store
 test.ipynb
+data/
 wandb/
+DA6402_A2/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
