@@ -1,0 +1,7 @@
+wandb
+numpy
+tqdm
+scikit-learn
+torch 
+torchvision
+lightning
