@@ -1,24 +1,49 @@
 import os
-import zipfile
-import requests
 import torch
+import zipfile
+import warnings
+import subprocess
+from PIL import ImageOps
 from tqdm.auto import tqdm
-from sklearn.model_selection import train_test_split
+import pytorch_lightning as pl
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Subset
-import pytorch_lightning as pl
-import subprocess
+from sklearn.model_selection import train_test_split
 
+warnings.filterwarnings("ignore", category=UserWarning)
+
+def pad_to_square(img, fill=0):
+    width, height = img.size
+    max_side = max(width, height)
+    padding = (
+        (max_side - width) // 2,     # left
+        (max_side - height) // 2,    # top
+        (max_side - width + 1) // 2, # right
+        (max_side - height + 1) // 2 # bottom
+    )
+    return ImageOps.expand(img, padding, fill=fill)
 
 class iNaturalistDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir="data", batch_size=32, num_workers=7, val_split=0.2):
+    def __init__(self, data_dir="data", batch_size=32, num_workers=1, val_split=0.2, image_dim=128, data_augmentation=False):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.val_split = val_split
-        self.transform = transforms.Compose([
-            transforms.Resize((32, 32)),
+        self.image_dim = image_dim
+        self.data_augmentation = data_augmentation
+        self.base_transform = transforms.Compose([
+            transforms.Lambda(pad_to_square),
+            transforms.Resize((self.image_dim, self.image_dim)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5]*3, std=[0.2]*3),
+        ])
+        self.augmentation_transform = transforms.Compose([
+            transforms.Lambda(pad_to_square),
+            transforms.Resize((self.image_dim, self.image_dim)),
+            transforms.RandomHorizontalFlip(p=0.5),  # Random horizontal flip
+            transforms.RandomRotation(degrees=15),  # Random rotation
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),  # Random color jitter
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.5]*3, std=[0.2]*3),
         ])
@@ -80,14 +105,16 @@ class iNaturalistDataModule(pl.LightningDataModule):
     
     def setup(self, stage=None):
         # Load the dataset
-        train_dataset = datasets.ImageFolder(os.path.join(self.data_dir, "train"), transform=self.transform)
-        test_dataset = datasets.ImageFolder(os.path.join(self.data_dir, "test"), transform=self.transform)
+        train_transform = self.augmentation_transform if self.data_augmentation else self.base_transform
+        train_dataset = datasets.ImageFolder(os.path.join(self.data_dir, "train"), transform=train_transform)
+        test_dataset = datasets.ImageFolder(os.path.join(self.data_dir, "test"), transform=self.base_transform)
 
         # Split the training dataset into training and validation sets
         train_indices, val_indices = train_test_split(
             range(len(train_dataset)),
             test_size=self.val_split,
             stratify=[train_dataset.targets[i] for i in range(len(train_dataset))],
+            random_state=42,
         )
         self.train_dataset = Subset(train_dataset, train_indices)
         self.val_dataset = Subset(train_dataset, val_indices)
