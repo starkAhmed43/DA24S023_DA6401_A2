@@ -24,7 +24,7 @@ def pad_to_square(img, fill=0):
     return ImageOps.expand(img, padding, fill=fill)
 
 class iNaturalistDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir="data", batch_size=32, num_workers=1, val_split=0.2, image_dim=128, data_augmentation=False):
+    def __init__(self, data_dir="data", batch_size=128, num_workers=1, val_split=0.2, image_dim=224, data_augmentation=False):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
@@ -68,40 +68,6 @@ class iNaturalistDataModule(pl.LightningDataModule):
 
             # Rename 'val' folder to 'test' inside the renamed 'data' directory
             os.rename(os.path.join(self.data_dir, "val"), os.path.join(self.data_dir, "test"))
-
-    def get_transformed_dataset(self):
-        def calc_transform(dataset, dataset_name):
-            channel_sum, channel_squared_sum = torch.zeros(3), torch.zeros(3)
-            num_pixels = total_height = total_width = 0
-
-            for img, _ in tqdm(dataset, desc=f"Calculating transform parameters for {dataset_name}", unit="image", leave=False):
-                img_tensor = transforms.ToTensor()(img)  # Convert image to tensor
-                channel_sum += img_tensor.sum(dim=(1, 2))  # Sum pixel values per channel
-                channel_squared_sum += (img_tensor ** 2).sum(dim=(1, 2))  # Sum squared pixel values per channel
-                num_pixels += img_tensor.shape[1] * img_tensor.shape[2]  # Total number of pixels per channel
-
-                total_height += img_tensor.shape[1]
-                total_width += img_tensor.shape[2]
-
-            mean = channel_sum / num_pixels
-            std = torch.sqrt(channel_squared_sum / num_pixels - mean ** 2)
-
-            avg_height = total_height // len(train_dataset)
-            avg_width = total_width // len(train_dataset)
-
-            return transforms.Compose([
-                transforms.Resize((avg_height, avg_width)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.4713, 0.4598, 0.3893], std=std),
-            ])
-
-        train_dataset = datasets.ImageFolder(os.path.join(self.data_dir, "train"))
-        train_dataset.transform = calc_transform(train_dataset, "train")
-
-        test_dataset = datasets.ImageFolder(os.path.join(self.data_dir, "test"))
-        test_dataset.transform = calc_transform(test_dataset, "test")
-
-        return train_dataset, test_dataset
     
     def setup(self, stage=None):
         # Load the dataset

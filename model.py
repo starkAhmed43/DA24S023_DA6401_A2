@@ -189,8 +189,6 @@ class CNNModel(pl.LightningModule):
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": "val_loss",  # Monitor validation loss
-                "interval": "epoch",
-                "frequency": 1,
+                "monitor": "val_loss",
             },
         }
