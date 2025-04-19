@@ -24,7 +24,7 @@ def pad_to_square(img, fill=0):
     return ImageOps.expand(img, padding, fill=fill)
 
 class iNaturalistDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir="data", batch_size=128, num_workers=1, val_split=0.2, image_dim=224, data_augmentation=False):
+    def __init__(self, data_dir="../data", batch_size=128, num_workers=1, val_split=0.2, image_dim=224, data_augmentation=False):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
