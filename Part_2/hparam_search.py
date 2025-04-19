@@ -1,9 +1,11 @@
 import wandb
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import WandbLogger
 
 from resnet50 import ResNet50FineTune
 from datamodule import iNaturalistDataModule
+
+seed_everything(42, workers=True)
 
 sweep_config = {
     "method": "bayes",  # Bayesian optimization
