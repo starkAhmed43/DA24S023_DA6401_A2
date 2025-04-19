@@ -2,7 +2,8 @@
 test.ipynb
 data/
 wandb/
-DA6402_A2/
+DA6401_A2/
+DA6401_A2_Finetune/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
