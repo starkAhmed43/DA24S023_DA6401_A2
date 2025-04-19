@@ -23,7 +23,7 @@ sweep_config = {
         "data_augmentation": {"values": [True, False]},
         "batch_norm": {"values": [True, False]},
         "dropout": {"values": [0.2, 0.3]},
-        "dense_neurons": {"values": [64, 128, 256, 512]},
+        "dense_neurons": {"values": [32, 64, 128]},
     },
 }
 
@@ -40,46 +40,48 @@ def train_model(config=None):
         }
         conv_filters = []            
         if config.filter_organisation == "double":
-            conv_filters = [config.num_filters * (2 ** i) for i in range(5)]
-            filter_sizes = [config.filter_sizes * (2 ** i) for i in range(5)]
+            conv_filters = [min(config.num_filters * (2 ** i), 256) for i in range(5)]
         elif config.filter_organisation == "halve":
-            conv_filters = [config.num_filters * (2 ** i) for i in range(5)].reverse()
-            filter_sizes = [config.filter_sizes * (2 ** i) for i in range(5)].reverse()
+            conv_filters = [max(config.num_filters // (2 ** i), 16) for i in range(5)]
         else:
             conv_filters = [config.num_filters] * 5
-            filter_sizes = [config.filter_sizes] * 5
 
         # Initialize the model
         model = CNNModel(
-            img_height=128,
-            img_width=128,
+            img_height=224,
+            img_width=224,
             conv_filters=conv_filters,
-            filter_sizes=filter_sizes,
-            learning_rate=config.learning_rate,
+            filter_sizes=[config.filter_sizes] * 5,
             activation_fn=activation_fn_map[config.activation_fn],
+            dense_neurons=config.dense_neurons,
+            num_classes=10,
             batch_norm=config.batch_norm,
             dropout=config.dropout,
+            learning_rate=config.learning_rate,
         )
 
         # Initialize the data module
         data_module = iNaturalistDataModule(
-            batch_size=64,
+            image_dim=224,
             val_split=0.2,
             data_augmentation=config.data_augmentation,
+            batch_size=256, 
+            num_workers=32
         )
 
         # Initialize WandB logger
-        wandb_logger = WandbLogger(project="DA6402_A2")
+        wandb_logger = WandbLogger(project="DA6401_A2")
 
         # Train the model
         trainer = Trainer(
-            max_epochs=10,
+            max_epochs=30,
             logger=wandb_logger,
             accelerator="auto",
             devices="auto",
+            enable_checkpointing=False,
         )
         trainer.fit(model, datamodule=data_module)
 
 if __name__ == "__main__":
-    sweep_id = wandb.sweep(sweep_config, project="DA6402_A2")
+    sweep_id = wandb.sweep(sweep_config, project="DA6401_A2")
     wandb.agent(sweep_id, train_model, count=50)
