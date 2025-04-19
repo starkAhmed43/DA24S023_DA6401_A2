@@ -1,9 +1,11 @@
 import wandb
 import torch.nn as nn
 from model import CNNModel
-from pytorch_lightning import Trainer
 from datamodule import iNaturalistDataModule
 from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning import Trainer, seed_everything
+
+seed_everything(42, workers=True)
 
 sweep_config = {
     "method": "bayes",  # Bayesian optimization
@@ -84,4 +86,4 @@ def train_model(config=None):
 
 if __name__ == "__main__":
     sweep_id = wandb.sweep(sweep_config, project="DA6401_A2")
-    wandb.agent(sweep_id, train_model, count=50)
+    wandb.agent(sweep_id, train_model, count=30)
